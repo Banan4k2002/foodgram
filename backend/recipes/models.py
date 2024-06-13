@@ -1,0 +1,58 @@
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
+from django.db import models
+
+User = get_user_model()
+
+
+class Tag(models.Model):
+    name = models.CharField('Название', max_length=32)
+    slug = models.SlugField('Слаг', max_length=32, unique=True)
+
+
+class Ingredient(models.Model):
+    name = models.CharField('Название', max_length=128)
+    measurement_unit = models.CharField('Единицы измерения', max_length=64)
+
+
+class Recipe(models.Model):
+    name = models.CharField('Название', max_length=256)
+    text = models.TextField('Описание')
+    cooking_time = models.PositiveSmallIntegerField(
+        'Время приготовления', validators=(MinValueValidator(1),)
+    )
+    image = models.ImageField('Изображение', upload_to='recipe_images')
+    tags = models.ManyToManyField(Tag)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+
+class RecipeIngredients(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    amount = models.PositiveSmallIntegerField(
+        'Количество', validators=(MinValueValidator(1),)
+    )
+
+
+class BaseUserRecipeModel(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='%(class)s'
+    )
+    recipe = models.ForeignKey(
+        Recipe, on_delete=models.CASCADE, related_name='%(class)s'
+    )
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'), name='unique_%(class)s'
+            ),
+        )
+
+
+class Favorite(BaseUserRecipeModel):
+    pass
+
+
+class ShoppingCart(BaseUserRecipeModel):
+    pass
