@@ -3,7 +3,10 @@ from django.db import models
 
 
 class User(AbstractUser):
-    pass
+    email = models.EmailField('Адрес электронной почты', unique=True)
+    first_name = models.CharField('Имя', max_length=150)
+    last_name = models.CharField('Фамилия', max_length=150)
+    avatar = models.ImageField('Аватар', upload_to='users')
 
 
 class Subscription(models.Model):

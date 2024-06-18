@@ -21,9 +21,14 @@ class Recipe(models.Model):
     cooking_time = models.PositiveSmallIntegerField(
         'Время приготовления', validators=(MinValueValidator(1),)
     )
-    image = models.ImageField('Изображение', upload_to='recipe_images')
+    image = models.ImageField('Изображение', upload_to='recipes/images')
     tags = models.ManyToManyField(Tag)
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    ingredients = models.ManyToManyField(
+        Ingredient, through='RecipeIngredients'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='recipes'
+    )
 
 
 class RecipeIngredients(models.Model):
@@ -36,13 +41,14 @@ class RecipeIngredients(models.Model):
 
 class BaseUserRecipeModel(models.Model):
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='%(class)s'
+        User, on_delete=models.CASCADE, related_name='%(class)ss'
     )
     recipe = models.ForeignKey(
-        Recipe, on_delete=models.CASCADE, related_name='%(class)s'
+        Recipe, on_delete=models.CASCADE, related_name='%(class)ss'
     )
 
     class Meta:
+        abstract = True
         constraints = (
             models.UniqueConstraint(
                 fields=('user', 'recipe'), name='unique_%(class)s'
