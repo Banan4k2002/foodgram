@@ -4,12 +4,13 @@ from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
 from rest_framework import permissions, status
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter
 from rest_framework.mixins import CreateModelMixin
-from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+from api.filters import IngredientFilter, RecipeFilter
+from api.pagination import LimitPageNumberPagination
+from api.permissions import IsAuthorPermission, PUTMethodPermission
 from api.serializers import (
     AvatarSerializer,
     FavoriteSerializer,
@@ -35,7 +36,7 @@ class CreateReadViewSet(CreateModelMixin, ReadOnlyModelViewSet):
 class UserViewSet(CreateReadViewSet):
     queryset = User.objects.all()
     serializer_class = UserGetSerializer
-    pagination_class = LimitOffsetPagination
+    pagination_class = LimitPageNumberPagination
 
     @action(
         methods=('get',),
@@ -47,8 +48,13 @@ class UserViewSet(CreateReadViewSet):
     def subscriptions(self, request):
         authors = Subscription.objects.filter(user=request.user)
 
-        serializer = self.get_serializer(authors, many=True)
-        return Response(serializer.data)
+        paginator = LimitPageNumberPagination()
+        paginated_authors = paginator.paginate_queryset(
+            queryset=authors, request=request
+        )
+
+        serializer = self.get_serializer(paginated_authors, many=True)
+        return paginator.get_paginated_response(data=serializer.data)
 
     @action(
         methods=('post', 'delete'),
@@ -71,7 +77,7 @@ class UserViewSet(CreateReadViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         methods=('get',),
@@ -81,7 +87,7 @@ class UserViewSet(CreateReadViewSet):
     )
     def me(self, request):
         serializer = self.get_serializer(request.user)
-        return Response(serializer.data)
+        return Response(data=serializer.data)
 
     @action(
         methods=('put', 'delete'),
@@ -136,16 +142,17 @@ class TagViewSet(ReadOnlyModelViewSet):
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    filter_backends = (SearchFilter,)
-    search_fields = ('^name',)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = IngredientFilter
 
 
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeGetSerializer
-    pagination_class = LimitOffsetPagination
+    permission_classes = (PUTMethodPermission,)
+    pagination_class = LimitPageNumberPagination
     filter_backends = (DjangoFilterBackend,)
-    # filterset_fields = ('author', 'tags')
+    filterset_class = RecipeFilter
 
     @action(
         methods=('post', 'delete'),
@@ -168,7 +175,7 @@ class RecipeViewSet(ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
     @action(
         methods=('post', 'delete'),
@@ -191,12 +198,19 @@ class RecipeViewSet(ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(serializer.data)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_permissions(self):
+        if self.action in ('partial_update', 'destroy'):
+            return (IsAuthorPermission(),)
+        elif self.action == 'create':
+            return (permissions.IsAuthenticated(),)
+        return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
             return super().get_serializer_class()
-        elif self.action == 'create':
+        elif self.action in ('create', 'partial_update'):
             return RecipePostSerializer
         else:
             return super().get_serializer_class()
