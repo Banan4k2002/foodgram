@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
+from shortlink.models import ShortLink
 
 User = get_user_model()
 
@@ -28,6 +29,9 @@ class Recipe(models.Model):
     )
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='recipes'
+    )
+    short_link = models.OneToOneField(
+        ShortLink, on_delete=models.CASCADE, null=True
     )
 
 

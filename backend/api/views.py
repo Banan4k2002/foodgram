@@ -200,6 +200,15 @@ class RecipeViewSet(ModelViewSet):
         serializer.save()
         return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(
+        methods=('get',),
+        detail=True,
+        url_path='get-link',
+    )
+    def get_link(self, request, pk):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        return Response(data={'short-link': recipe.short_link.short_url})
+
     def get_permissions(self):
         if self.action in ('partial_update', 'destroy'):
             return (IsAuthorPermission(),)
