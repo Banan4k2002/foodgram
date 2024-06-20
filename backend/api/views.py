@@ -1,7 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
+from prettytable import PrettyTable
 from rest_framework import permissions, status
 from rest_framework.decorators import action
 from rest_framework.mixins import CreateModelMixin
@@ -23,7 +26,13 @@ from api.serializers import (
     UserGetSerializer,
     UserPostSerializer,
 )
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import (
+    Ingredient,
+    Recipe,
+    RecipeIngredients,
+    ShoppingCart,
+    Tag,
+)
 from users.models import Subscription
 
 User = get_user_model()
@@ -208,6 +217,40 @@ class RecipeViewSet(ModelViewSet):
     def get_link(self, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
         return Response(data={'short-link': recipe.short_link.short_url})
+
+    @action(
+        methods=('get',),
+        detail=False,
+        url_path='download_shopping_cart',
+        permission_classes=(permissions.IsAuthenticated,),
+    )
+    def download_shopping_cart(self, request):
+        carts = ShoppingCart.objects.filter(user=request.user)
+        recipes = Recipe.objects.filter(shoppingcarts__in=carts)
+        ingredients = (
+            RecipeIngredients.objects.filter(recipe__in=recipes)
+            .values('ingredient__name', 'ingredient__measurement_unit')
+            .annotate(amount=Sum('amount'))
+        )
+
+        response = HttpResponse(content_type='application/txt')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
+
+        table = PrettyTable()
+        table.field_names = ('Название', 'Количество', 'Единицы измерения')
+        for ingredient in ingredients:
+            table.add_row(
+                (
+                    ingredient.get('ingredient__name'),
+                    ingredient.get('amount'),
+                    ingredient.get('ingredient__measurement_unit'),
+                )
+            )
+
+        response.writelines(table.get_string())
+        return response
 
     def get_permissions(self):
         if self.action in ('partial_update', 'destroy'):
