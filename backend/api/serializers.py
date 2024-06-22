@@ -356,7 +356,8 @@ class BaseUserRecipeSerializer(serializers.ModelSerializer):
         ).exists():
             raise ValidationError(
                 {
-                    'errors': f'Рецепт уже добавлен в {self.Meta.model._meta.verbose_name}'
+                    'errors': 'Рецепт уже добавлен в '
+                    f'{self.Meta.model._meta.verbose_name}'
                 }
             )
         return data
