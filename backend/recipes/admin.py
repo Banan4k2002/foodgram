@@ -13,6 +13,7 @@ from recipes.models import (
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
+    prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(Ingredient)
@@ -24,13 +25,13 @@ class IngredientAdmin(admin.ModelAdmin):
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author')
-    search_fields = ('name', 'author')
+    search_fields = ('name', 'author__username')
     list_filter = ('tags',)
 
 
 @admin.register(RecipeIngredients)
 class RecipeIngredientsAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('__str__', 'amount')
 
 
 @admin.register(Favorite)
