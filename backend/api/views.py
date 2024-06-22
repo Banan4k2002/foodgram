@@ -260,9 +260,6 @@ class RecipeViewSet(ModelViewSet):
         return super().get_permissions()
 
     def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
-            return super().get_serializer_class()
-        elif self.action in ('create', 'partial_update'):
+        if self.action in ('create', 'partial_update'):
             return RecipePostSerializer
-        else:
-            return super().get_serializer_class()
+        return super().get_serializer_class()
