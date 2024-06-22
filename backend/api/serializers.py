@@ -343,12 +343,12 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return Subscription.objects.create(**validated_data)
 
 
-class FavoriteSerializer(serializers.ModelSerializer):
+class BaseUserRecipeSerializer(serializers.ModelSerializer):
     recipe = ShortRecipeSerializer(read_only=True)
 
     class Meta:
         fields = ('recipe',)
-        model = Favorite
+        model = None
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
@@ -361,12 +361,14 @@ class FavoriteSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         data['recipe'] = recipe
         data['user'] = user
-        if Favorite.objects.filter(
+        if self.Meta.model.objects.filter(
             recipe=data['recipe'],
             user=data['user'],
         ).exists():
             raise ValidationError(
-                {'errors': 'Рецепт уже добавлен в избранное'}
+                {
+                    'errors': f'Рецепт уже добавлен в {self.Meta.model._meta.verbose_name}'
+                }
             )
         return data
 
@@ -377,39 +379,16 @@ class FavoriteSerializer(serializers.ModelSerializer):
         user = self.context.get('request').user
         validated_data['recipe'] = recipe
         validated_data['user'] = user
-        return Favorite.objects.create(**validated_data)
+        return self.Meta.model.objects.create(**validated_data)
 
 
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    recipe = ShortRecipeSerializer(read_only=True)
+class FavoriteSerializer(BaseUserRecipeSerializer):
 
-    class Meta:
-        fields = ('recipe',)
+    class Meta(BaseUserRecipeSerializer.Meta):
+        model = Favorite
+
+
+class ShoppingCartSerializer(BaseUserRecipeSerializer):
+
+    class Meta(BaseUserRecipeSerializer.Meta):
         model = ShoppingCart
-
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        return representation.pop('recipe')
-
-    def validate(self, data):
-        recipe = get_object_or_404(
-            Recipe, pk=self.context.get('view').kwargs.get('pk')
-        )
-        user = self.context.get('request').user
-        data['recipe'] = recipe
-        data['user'] = user
-        if ShoppingCart.objects.filter(
-            recipe=data['recipe'],
-            user=data['user'],
-        ).exists():
-            raise ValidationError({'errors': 'Рецепт уже добавлен в корзину'})
-        return data
-
-    def create(self, validated_data):
-        recipe = get_object_or_404(
-            Recipe, pk=self.context.get('view').kwargs.get('pk')
-        )
-        user = self.context.get('request').user
-        validated_data['recipe'] = recipe
-        validated_data['user'] = user
-        return ShoppingCart.objects.create(**validated_data)

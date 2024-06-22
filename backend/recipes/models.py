@@ -109,12 +109,12 @@ class BaseUserRecipeModel(models.Model):
 class Favorite(BaseUserRecipeModel):
 
     class Meta:
-        verbose_name = 'рецепт в избранном'
-        verbose_name_plural = 'Рецепты в избранных'
+        verbose_name = 'избранное'
+        verbose_name_plural = 'Избранные'
 
 
 class ShoppingCart(BaseUserRecipeModel):
 
     class Meta:
-        verbose_name = 'рецепт в корзине'
-        verbose_name_plural = 'Рецепты в корзинах'
+        verbose_name = 'корзину'
+        verbose_name_plural = 'Корзины'
