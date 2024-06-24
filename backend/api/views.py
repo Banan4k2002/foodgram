@@ -6,7 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
 from prettytable import PrettyTable
 from rest_framework import permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
@@ -216,7 +216,13 @@ class RecipeViewSet(ModelViewSet):
     )
     def get_link(self, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
-        return Response(data={'short-link': recipe.short_link.short_url})
+        return Response(
+            data={
+                'short-link': request.build_absolute_uri(
+                    f'/s/{recipe.short_link}'
+                )
+            }
+        )
 
     @action(
         methods=('get',),
@@ -263,3 +269,10 @@ class RecipeViewSet(ModelViewSet):
         if self.action in ('create', 'partial_update'):
             return RecipePostSerializer
         return super().get_serializer_class()
+
+
+@api_view(('get',))
+def get_recipe_by_link(request, shortlink):
+    recipe = get_object_or_404(Recipe, short_link=shortlink)
+    serializer = RecipeGetSerializer(recipe, context={'request': request})
+    return Response(serializer.data)

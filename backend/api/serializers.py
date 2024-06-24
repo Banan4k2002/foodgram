@@ -3,7 +3,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.validators import ValidationError
-from shortlink.models import ShortLink
 
 from api.fields import Base64ImageField
 from api.pagination import RecipesLimitPagination
@@ -187,13 +186,6 @@ class RecipePostSerializer(serializers.ModelSerializer):
                 recipe=recipe,
                 amount=ingredient['amount'],
             )
-
-        request_path = self.context.get('request').get_full_path()
-        short_link = ShortLink.objects.create(
-            full_url=f'{request_path}{recipe.pk}'
-        )
-        recipe.short_link = short_link
-        recipe.save()
 
         return recipe
 

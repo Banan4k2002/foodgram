@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
-from shortlink.models import ShortLink
+from shortuuidfield.fields import ShortUUIDField
 
 User = get_user_model()
 
@@ -47,12 +47,7 @@ class Recipe(models.Model):
         related_name='recipes',
         verbose_name='Автор',
     )
-    short_link = models.OneToOneField(
-        ShortLink,
-        on_delete=models.CASCADE,
-        null=True,
-        verbose_name='Короткая ссылка',
-    )
+    short_link = ShortUUIDField('Короткая ссылка', unique=True)
 
     class Meta:
         verbose_name = 'рецепт'
