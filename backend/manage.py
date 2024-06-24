@@ -3,10 +3,6 @@
 import os
 import sys
 
-from utils.shortlink_patch import shortlink_patch
-
-shortlink_patch()
-
 
 def main():
     """Run administrative tasks."""
