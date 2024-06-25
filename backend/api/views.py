@@ -216,12 +216,10 @@ class RecipeViewSet(ModelViewSet):
     )
     def get_link(self, request, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
+        host = request.META.get('HTTP_HOST')
+        scheme = request.scheme
         return Response(
-            data={
-                'short-link': request.build_absolute_uri(
-                    f'/s/{recipe.short_link}'
-                )
-            }
+            data={'short-link': (f'{scheme}://{host}/s/{recipe.short_link}')}
         )
 
     @action(
