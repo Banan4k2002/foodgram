@@ -108,3 +108,7 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {'LOGIN_FIELD': 'email'}
+
+CSRF_TRUSTED_ORIGINS = str(
+    os.getenv('CSRF_TRUSTED_ORIGINS', '127.0.0.1')
+).split(' ')
