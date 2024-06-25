@@ -52,6 +52,7 @@ class Recipe(models.Model):
     class Meta:
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
+        ordering = ('-id',)
 
     def __str__(self):
         return self.name

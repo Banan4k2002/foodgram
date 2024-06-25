@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
 from prettytable import PrettyTable
@@ -239,11 +239,6 @@ class RecipeViewSet(ModelViewSet):
             .annotate(amount=Sum('amount'))
         )
 
-        response = HttpResponse(content_type='application/txt')
-        response['Content-Disposition'] = (
-            'attachment; filename="shopping_list.txt"'
-        )
-
         table = PrettyTable()
         table.field_names = ('Название', 'Количество', 'Единицы измерения')
         for ingredient in ingredients:
@@ -255,7 +250,11 @@ class RecipeViewSet(ModelViewSet):
                 )
             )
 
-        response.writelines(table.get_string())
+        response = HttpResponse(content_type='text/plain')
+        response['Content-Disposition'] = (
+            'attachment; filename="shopping_list.txt"'
+        )
+        response.write(table.get_string())
         return response
 
     def get_permissions(self):
@@ -274,5 +273,5 @@ class RecipeViewSet(ModelViewSet):
 @api_view(('get',))
 def get_recipe_by_link(request, shortlink):
     recipe = get_object_or_404(Recipe, short_link=shortlink)
-    serializer = RecipeGetSerializer(recipe, context={'request': request})
-    return Response(serializer.data)
+    recipe_url = request.build_absolute_uri(f'/recipes/{recipe.pk}')
+    return redirect(recipe_url)
