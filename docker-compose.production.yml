@@ -13,12 +13,18 @@ services:
     env_file: .env
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   backend:
     container_name: foodgram-back
     image: banan4k2002/foodgram_backend:latest
     env_file: .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - static:/backend_static
       - media:/media
