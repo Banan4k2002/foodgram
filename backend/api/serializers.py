@@ -6,14 +6,8 @@ from rest_framework.validators import ValidationError
 
 from api.fields import Base64ImageField
 from api.pagination import RecipesLimitPagination
-from recipes.models import (
-    Favorite,
-    Ingredient,
-    Recipe,
-    RecipeIngredients,
-    ShoppingCart,
-    Tag,
-)
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredients,
+                            ShoppingCart, Tag)
 from users.models import Subscription
 
 User = get_user_model()
