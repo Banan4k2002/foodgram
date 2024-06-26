@@ -1,7 +1,13 @@
 from django.contrib import admin
 
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredients,
-                            ShoppingCart, Tag)
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 
 
 @admin.register(Tag)
@@ -23,8 +29,8 @@ class RecipeAdmin(admin.ModelAdmin):
     list_filter = ('tags',)
 
 
-@admin.register(RecipeIngredients)
-class RecipeIngredientsAdmin(admin.ModelAdmin):
+@admin.register(RecipeIngredient)
+class RecipeIngredientAdmin(admin.ModelAdmin):
     list_display = ('__str__', 'amount')
 
 

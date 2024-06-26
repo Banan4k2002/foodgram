@@ -6,8 +6,14 @@ from rest_framework.validators import ValidationError
 
 from api.fields import Base64ImageField
 from api.pagination import RecipesLimitPagination
-from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredients,
-                            ShoppingCart, Tag)
+from recipes.models import (
+    Favorite,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 from users.models import Subscription
 
 User = get_user_model()
@@ -80,19 +86,19 @@ class AvatarSerializer(serializers.ModelSerializer):
         fields = ('avatar',)
 
 
-class RecipeIngredientsPostSerializer(serializers.ModelSerializer):
+class RecipeIngredientPostSerializer(serializers.ModelSerializer):
     id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
 
     class Meta:
-        model = RecipeIngredients
+        model = RecipeIngredient
         fields = ('id', 'amount')
 
 
-class RecipeIngredientsSerializer(serializers.ModelSerializer):
+class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredient = IngredientSerializer(read_only=True)
 
     class Meta:
-        model = RecipeIngredients
+        model = RecipeIngredient
         fields = (
             'ingredient',
             'amount',
@@ -105,8 +111,8 @@ class RecipeIngredientsSerializer(serializers.ModelSerializer):
 
 
 class RecipePostSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientsPostSerializer(
-        many=True, source='recipeingredients_set'
+    ingredients = RecipeIngredientPostSerializer(
+        many=True, source='recipeingredient_set'
     )
     image = Base64ImageField()
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -142,8 +148,8 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, data):
-        if 'recipeingredients_set' in data:
-            data['ingredients'] = data.get('recipeingredients_set')
+        if 'recipeingredient_set' in data:
+            data['ingredients'] = data.get('recipeingredient_set')
         required_fields = (
             'ingredients',
             'tags',
@@ -165,7 +171,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return serializer.data
 
     def create(self, validated_data):
-        ingredients = validated_data.pop('recipeingredients_set')
+        ingredients = validated_data.pop('recipeingredient_set')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
 
@@ -175,7 +181,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
             current_ingredient = get_object_or_404(
                 Ingredient, pk=ingredient['id'].pk
             )
-            RecipeIngredients.objects.create(
+            RecipeIngredient.objects.create(
                 ingredient=current_ingredient,
                 recipe=recipe,
                 amount=ingredient['amount'],
@@ -184,7 +190,7 @@ class RecipePostSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('recipeingredients_set')
+        ingredients = validated_data.pop('recipeingredient_set')
         tags = validated_data.pop('tags')
 
         instance.name = validated_data.get('name')
@@ -195,12 +201,12 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
         instance.tags.set(tags)
 
-        instance.recipeingredients_set.all().delete()
+        instance.recipeingredient_set.all().delete()
         for ingredient in ingredients:
             current_ingredient = get_object_or_404(
                 Ingredient, pk=ingredient['id'].pk
             )
-            RecipeIngredients.objects.create(
+            RecipeIngredient.objects.create(
                 ingredient=current_ingredient,
                 recipe=instance,
                 amount=ingredient['amount'],
@@ -209,8 +215,8 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
 
 class RecipeGetSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientsSerializer(
-        many=True, source='recipeingredients_set'
+    ingredients = RecipeIngredientSerializer(
+        many=True, source='recipeingredient_set'
     )
     tags = TagSerializer(many=True)
     author = UserGetSerializer(read_only=True)

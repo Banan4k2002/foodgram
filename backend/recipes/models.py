@@ -39,7 +39,7 @@ class Recipe(models.Model):
     image = models.ImageField('Изображение', upload_to='recipes/images')
     tags = models.ManyToManyField(Tag, verbose_name='Теги')
     ingredients = models.ManyToManyField(
-        Ingredient, through='RecipeIngredients'
+        Ingredient, through='RecipeIngredient'
     )
     author = models.ForeignKey(
         User,
@@ -58,7 +58,7 @@ class Recipe(models.Model):
         return self.name
 
 
-class RecipeIngredients(models.Model):
+class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         Recipe, on_delete=models.CASCADE, verbose_name='Рецепт'
     )
@@ -72,6 +72,12 @@ class RecipeIngredients(models.Model):
     class Meta:
         verbose_name = 'ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецептах'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('ingredient', 'recipe'),
+                name='unique_recipe_ingredient',
+            ),
+        )
 
     def __str__(self):
         return (
@@ -104,13 +110,13 @@ class BaseUserRecipeModel(models.Model):
 
 class Favorite(BaseUserRecipeModel):
 
-    class Meta:
+    class Meta(BaseUserRecipeModel.Meta):
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранные'
 
 
 class ShoppingCart(BaseUserRecipeModel):
 
-    class Meta:
+    class Meta(BaseUserRecipeModel.Meta):
         verbose_name = 'корзину'
         verbose_name_plural = 'Корзины'

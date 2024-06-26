@@ -14,13 +14,25 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import LimitPageNumberPagination
 from api.permissions import IsAuthorPermission, PUTMethodPermission
-from api.serializers import (AvatarSerializer, FavoriteSerializer,
-                             IngredientSerializer, RecipeGetSerializer,
-                             RecipePostSerializer, ShoppingCartSerializer,
-                             SubscriptionSerializer, TagSerializer,
-                             UserGetSerializer, UserPostSerializer)
-from recipes.models import (Ingredient, Recipe, RecipeIngredients,
-                            ShoppingCart, Tag)
+from api.serializers import (
+    AvatarSerializer,
+    FavoriteSerializer,
+    IngredientSerializer,
+    RecipeGetSerializer,
+    RecipePostSerializer,
+    ShoppingCartSerializer,
+    SubscriptionSerializer,
+    TagSerializer,
+    UserGetSerializer,
+    UserPostSerializer,
+)
+from recipes.models import (
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
 from users.models import Subscription
 
 User = get_user_model()
@@ -220,7 +232,7 @@ class RecipeViewSet(ModelViewSet):
         carts = ShoppingCart.objects.filter(user=request.user)
         recipes = Recipe.objects.filter(shoppingcarts__in=carts)
         ingredients = (
-            RecipeIngredients.objects.filter(recipe__in=recipes)
+            RecipeIngredient.objects.filter(recipe__in=recipes)
             .values('ingredient__name', 'ingredient__measurement_unit')
             .annotate(amount=Sum('amount'))
         )
