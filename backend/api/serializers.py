@@ -6,14 +6,8 @@ from rest_framework.validators import ValidationError
 
 from api.fields import Base64ImageField
 from api.pagination import RecipesLimitPagination
-from recipes.models import (
-    Favorite,
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Tag,
-)
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from users.models import Subscription
 
 User = get_user_model()
@@ -116,6 +110,11 @@ class RecipePostSerializer(serializers.ModelSerializer):
     )
     image = Base64ImageField()
     author = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    tags = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(),
+        many=True,
+        error_messages={'does_not_exist': 'В БД нет такого значения!'},
+    )
 
     class Meta:
         model = Recipe
@@ -149,19 +148,10 @@ class RecipePostSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if 'recipeingredient_set' in data:
-            data['ingredients'] = data.get('recipeingredient_set')
-        required_fields = (
-            'ingredients',
-            'tags',
-            'name',
-            'text',
-            'cooking_time',
-        )
-        for field in required_fields:
+            data['ingredients'] = data.pop('recipeingredient_set')
+        for field in ('tags', 'ingredients'):
             if field not in data:
                 raise ValidationError({field: 'Обязательное поле'})
-        data.pop('ingredients')
-
         return data
 
     def to_representation(self, instance):
@@ -170,47 +160,37 @@ class RecipePostSerializer(serializers.ModelSerializer):
         serializer = RecipeGetSerializer(instance, context=context)
         return serializer.data
 
+    def ingredients_set(self, ingredients, recipe):
+        recipe_ingredients = []
+        for ingredient in ingredients:
+            recipe_ingredients.append(
+                RecipeIngredient(
+                    ingredient=ingredient['id'],
+                    recipe=recipe,
+                    amount=ingredient['amount'],
+                )
+            )
+        RecipeIngredient.objects.bulk_create(recipe_ingredients)
+
     def create(self, validated_data):
-        ingredients = validated_data.pop('recipeingredient_set')
+        ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
         recipe = Recipe.objects.create(**validated_data)
 
         recipe.tags.set(tags)
-
-        for ingredient in ingredients:
-            current_ingredient = get_object_or_404(
-                Ingredient, pk=ingredient['id'].pk
-            )
-            RecipeIngredient.objects.create(
-                ingredient=current_ingredient,
-                recipe=recipe,
-                amount=ingredient['amount'],
-            )
+        self.ingredients_set(ingredients=ingredients, recipe=recipe)
 
         return recipe
 
     def update(self, instance, validated_data):
-        ingredients = validated_data.pop('recipeingredient_set')
+        ingredients = validated_data.pop('ingredients')
         tags = validated_data.pop('tags')
 
-        instance.name = validated_data.get('name')
-        instance.image = validated_data.get('image', instance.image)
-        instance.text = validated_data.get('text')
-        instance.cooking_time = validated_data.get('cooking_time')
-        instance.save()
-
         instance.tags.set(tags)
+        instance.ingredients.clear()
+        self.ingredients_set(ingredients=ingredients, recipe=instance)
 
-        instance.recipeingredient_set.all().delete()
-        for ingredient in ingredients:
-            current_ingredient = get_object_or_404(
-                Ingredient, pk=ingredient['id'].pk
-            )
-            RecipeIngredient.objects.create(
-                ingredient=current_ingredient,
-                recipe=instance,
-                amount=ingredient['amount'],
-            )
+        super().update(instance, validated_data)
         return instance
 
 

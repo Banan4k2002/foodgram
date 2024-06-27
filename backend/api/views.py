@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from djoser.serializers import SetPasswordSerializer
 from prettytable import PrettyTable
@@ -12,27 +13,16 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from api.filters import IngredientFilter, RecipeFilter
+from api.mixins import UserRecipeMixin
 from api.pagination import LimitPageNumberPagination
 from api.permissions import IsAuthorPermission, PUTMethodPermission
-from api.serializers import (
-    AvatarSerializer,
-    FavoriteSerializer,
-    IngredientSerializer,
-    RecipeGetSerializer,
-    RecipePostSerializer,
-    ShoppingCartSerializer,
-    SubscriptionSerializer,
-    TagSerializer,
-    UserGetSerializer,
-    UserPostSerializer,
-)
-from recipes.models import (
-    Ingredient,
-    Recipe,
-    RecipeIngredient,
-    ShoppingCart,
-    Tag,
-)
+from api.serializers import (AvatarSerializer, FavoriteSerializer,
+                             IngredientSerializer, RecipeGetSerializer,
+                             RecipePostSerializer, ShoppingCartSerializer,
+                             SubscriptionSerializer, TagSerializer,
+                             UserGetSerializer, UserPostSerializer)
+from recipes.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                            ShoppingCart, Tag)
 from users.models import Subscription
 
 User = get_user_model()
@@ -128,7 +118,9 @@ class UserViewSet(CreateReadViewSet):
     def set_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        request.user.set_password(serializer.data.get('new_password'))
+        request.user.set_password(
+            serializer.validated_data.get('new_password')
+        )
         request.user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -155,7 +147,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     filterset_class = IngredientFilter
 
 
-class RecipeViewSet(ModelViewSet):
+class RecipeViewSet(UserRecipeMixin, ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeGetSerializer
     permission_classes = (PUTMethodPermission,)
@@ -171,20 +163,12 @@ class RecipeViewSet(ModelViewSet):
         serializer_class=FavoriteSerializer,
     )
     def favorite(self, request, pk):
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(Recipe, pk=pk)
-            favorite = request.user.favorites.filter(recipe=recipe)
-            if favorite.exists():
-                favorite.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(
-                data={'errors': 'Данного рецепта нет в избранных'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        return self.base_user_recipe_action(
+            request=request,
+            pk=pk,
+            instance_model=Favorite,
+            error_message='Данного рецепта нет в избранных',
+        )
 
     @action(
         methods=('post', 'delete'),
@@ -194,20 +178,12 @@ class RecipeViewSet(ModelViewSet):
         serializer_class=ShoppingCartSerializer,
     )
     def shopping_cart(self, request, pk):
-        if request.method == 'DELETE':
-            recipe = get_object_or_404(Recipe, pk=pk)
-            cart = request.user.shoppingcarts.filter(recipe=recipe)
-            if cart.exists():
-                cart.delete()
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(
-                data={'errors': 'Данного рецепта нет в корзине'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        return self.base_user_recipe_action(
+            request=request,
+            pk=pk,
+            instance_model=ShoppingCart,
+            error_message='Данного рецепта нет в корзине',
+        )
 
     @action(
         methods=('get',),
@@ -234,7 +210,7 @@ class RecipeViewSet(ModelViewSet):
         ingredients = (
             RecipeIngredient.objects.filter(recipe__in=recipes)
             .values('ingredient__name', 'ingredient__measurement_unit')
-            .annotate(amount=Sum('amount'))
+            .annotate(amount_sum=Sum('amount'))
         )
 
         table = PrettyTable()
@@ -243,7 +219,7 @@ class RecipeViewSet(ModelViewSet):
             table.add_row(
                 (
                     ingredient.get('ingredient__name'),
-                    ingredient.get('amount'),
+                    ingredient.get('amount_sum'),
                     ingredient.get('ingredient__measurement_unit'),
                 )
             )
@@ -271,5 +247,7 @@ class RecipeViewSet(ModelViewSet):
 @api_view(('get',))
 def get_recipe_by_link(request, shortlink):
     recipe = get_object_or_404(Recipe, short_link=shortlink)
-    recipe_url = request.build_absolute_uri(f'/recipes/{recipe.pk}')
+    recipe_url = request.build_absolute_uri(
+        reverse('recipe-detail', kwargs={'pk': recipe.pk})
+    )
     return redirect(recipe_url)

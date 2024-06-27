@@ -12,10 +12,14 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddConstraint(
             model_name='favorite',
-            constraint=models.UniqueConstraint(fields=('user', 'recipe'), name='unique_favorite'),
+            constraint=models.UniqueConstraint(
+                fields=('user', 'recipe'), name='unique_favorite'
+            ),
         ),
         migrations.AddConstraint(
             model_name='shoppingcart',
-            constraint=models.UniqueConstraint(fields=('user', 'recipe'), name='unique_shoppingcart'),
+            constraint=models.UniqueConstraint(
+                fields=('user', 'recipe'), name='unique_shoppingcart'
+            ),
         ),
     ]
