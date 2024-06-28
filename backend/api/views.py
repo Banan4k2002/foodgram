@@ -249,5 +249,5 @@ def get_recipe_by_link(request, shortlink):
     recipe = get_object_or_404(Recipe, short_link=shortlink)
     recipe_url = request.build_absolute_uri(
         reverse('recipe-detail', kwargs={'pk': recipe.pk})
-    )
+    ).replace('api/', '')
     return redirect(recipe_url)
